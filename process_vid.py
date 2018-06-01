@@ -5,11 +5,11 @@ import dlib
 from imutils import face_utils
 from PIL import Image
 
-crop_img_dir = "photos/val2/"
-frame_img_dir = "input_orig4/"
-crop_mask_img_dir = "nptel_test/images/"
-final_op_dir = "/home/shuvamg007/pix2pix-tensorflow/final_opn/"
-predictor_path = "shape_predictor_68_face_landmarks.dat"
+crop_img_dir = "/path/to/aligned/image"
+frame_img_dir = "/path/to/src/frame/image"
+crop_mask_img_dir = "/path/to/generated/image"
+final_op_dir = "/destination/path"
+predictor_path = "/path/to/shape_predictor_68_face_landmarks.dat"
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
@@ -31,7 +31,7 @@ def get_center(img_src):
 for img_val in range(10020,16350):
     crop_img = crop_img_dir + str(img_val) + ".png"
     frame_img = frame_img_dir + str(img_val) + ".png"
-    crop_mask_img = crop_mask_img_dir + str(img_val) + "-outputs.png"
+    crop_mask_img = crop_mask_img_dir + str(img_val) + ".png"
 
     img_src = cv2.imread(crop_img)
     

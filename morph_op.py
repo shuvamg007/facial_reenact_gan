@@ -7,11 +7,11 @@ from imutils.video import FileVideoStream
 import time
 import os
 
-video_link = "rus_short.mp4"
-op_directory = "output3/"
-ip_directory = "input3/"
-orig_directory = "input_orig3/"
-shape_predictor_path = "shape_predictor_68_face_landmarks.dat"
+video_link = "/path/to/video/file"
+op_directory = "/path/to/annotated/image"
+ip_directory = "/path/to/aligned/image"
+orig_directory = "/path/to/frame/image"
+shape_predictor_path = "/path/to/shape_predictor_68_face_landmarks.dat"
 
 
 init_frame = 0
