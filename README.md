@@ -141,4 +141,4 @@ Output:
 After the generation of frames, one can easily merge the output in `final_op` using FFMPEG to stich the video.
 
 ## Acknowledgments
-Kudos to [Christopher Hesse](https://github.com/christopherhesse) for his amazing pix2pix TensorFlow implementation and [Dat Tran](https://github.com/datitran) for his awesom work on face2face. 
+Kudos to [Christopher Hesse](https://github.com/christopherhesse) for his amazing pix2pix TensorFlow implementation and [Dat Tran](https://github.com/datitran) for his awesome work on face2face. 
