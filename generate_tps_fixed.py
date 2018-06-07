@@ -4,10 +4,19 @@ import numpy as np
 import imutils
 import dlib
 from imutils.video import FileVideoStream
+import tensorflow as tf
 import time
 from PIL import Image
 import os
 from tps import from_control_points
+import argparse
+
+def create_dir(pth):
+    cwd = os.getcwd()
+    dir = cwd + "/" + pth
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    return dir + "/"
 
 def get_center(img_src):
     gray = cv2.cvtColor(img_src, cv2.COLOR_BGR2GRAY)
@@ -27,7 +36,7 @@ def get_shape(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     rects = detector(gray, 0)
     shape_d = predictor(gray, rects[0])
-    shape_d = face_utils.shape_to_np(shaped)
+    shape_d = face_utils.shape_to_np(shape_d)
     return shape_d
 
 def calc_tps(shape_src_outline, shape_dst_outline):
@@ -44,29 +53,34 @@ def load_graph(graph_filename):
     graph = tf.Graph()
     with graph.as_default():
         od_graph_def = tf.GraphDef()
-        with tf.gfile.GFile(frozen_graph_filename, 'rb') as fid:
+        with tf.gfile.GFile(graph_filename, 'rb') as fid:
             serialized_graph = fid.read()
             od_graph_def.ParseFromString(serialized_graph)
             tf.import_graph_def(od_graph_def, name='')
     return graph
 
-tot = 16000
-op_directory = "/path/for/destination/images"
-directory_src = "/path/to/source/images"
-directory_dst = "/path/to/target/images"
-shape_predictor_path = "/path/to/shape_predictor_68_face_landmarks.dat"
-model_file = "/path/to/model"
+parser = argparse.ArgumentParser()
+parser.add_argument('--predictor', type=str, help='Path to shape_predictor_68_face_landmarks.dat', required=True)
+parser.add_argument('--model', type=str, help='Path to frozen model', required=True)
+args = parser.parse_args()
+
+op_directory = create_dir("tgt_oriented")
+directory_src = create_dir("align_tgt")
+directory_dst = create_dir("align_src")
+shape_predictor_path = args.predictor
+model_file = args.model
+tot = max(len(os.listdir(directory_src)), len(os.listdir(directory_dst))) + 10000
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(shape_predictor_path)
 
-graph = load_graph(args.frozen_model_file)
+graph = load_graph(model_file)
 image_tensor = graph.get_tensor_by_name('image_tensor:0')
-output_tensor = graph.get_tensor_by_name('generated_output/output:0')
+output_tensor = graph.get_tensor_by_name('generate_output/output:0')
 sess = tf.Session(graph=graph)
 
 print("new src")
-counter = 10020
+counter = 10000
 
 while counter < tot:
     flag = 0
@@ -74,13 +88,12 @@ while counter < tot:
     img_src1 = cv2.imread(directory_src + str(counter) + ".png")
     # img_src1 = img_src1[:,:300]
     img_src1 = imutils.resize(img_src1, width=256)
-    cv2.imwrite("img.png",img_src1)
 
     # print(np.shape(img_src1))
     clone = np.zeros([256,256,3], dtype=np.uint8)
-    img_dst1 = cv2.imread(directory_dst + str(counter-20) + ".png")
+    img_dst1 = cv2.imread(directory_dst + str(counter) + ".png")
     img_dst1 = imutils.resize(img_dst1, width=256)
-    
+
     img_src = img_dst1
     img_dst = img_src1
 
@@ -103,7 +116,7 @@ while counter < tot:
 
     for i in range(20):
         shape_dst[i+48] = cp.transform(shape_src[i+48][0], shape_src[i+48][1])
-    
+
     # shape = face_utils.shape_to_np(shape_dst)
     shape = shape_dst
     src_centre = get_center(img_dst)
@@ -133,8 +146,10 @@ while counter < tot:
                     (a, b) = (x, y)
                 count = count + 1
 
-            img_dst[src_centre[1]-42:src_centre[1]+42, src_centre[0]-42:src_centre[0]+42] = clone[centre[1]-42:centre[1]+42, centre[0]-42:centre[0]+42]
-    
-    img_dst = sess.run(output_tensor, feed_dict={image_tensor: img_dst})
-    cv2.imwrite(op_directory + str(counter) + ".png", img_dst)
+            img_dst[src_centre[1]-45:src_centre[1]+45, src_centre[0]-45:src_centre[0]+45] = clone[centre[1]-45:centre[1]+45, centre[0]-45:centre[0]+45]
+    img_dst = np.concatenate((img_dst, img_dst1), axis=1)
+    img_fin = sess.run(output_tensor, feed_dict={image_tensor: img_dst})
+
+    img_fin = cv2.cvtColor(np.squeeze(img_fin), cv2.COLOR_RGB2BGR)
+    cv2.imwrite(op_directory + str(counter) + ".png", img_fin)
     counter = counter + 1

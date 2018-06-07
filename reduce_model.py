@@ -211,10 +211,10 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         # Restore original model
         saver = tf.train.Saver()
-        checkpoint = tf.train.latest_checkpoint(args.input_folder)
+        checkpoint = tf.train.latest_checkpoint(args.ip_folder)
         saver.restore(sess, checkpoint)
 
         # Export reduced model used for prediction
         saver = tf.train.Saver()
-        saver.save(sess, '{}/reduced_model'.format(args.output_folder))
+        saver.save(sess, '{}/reduced_model'.format(args.op_folder))
         print("Model exported to {}".format(checkpoint))

@@ -2,9 +2,6 @@ import os, argparse
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 
-dir = os.path.dirname(os.path.realpath(__file__))
-
-
 def freeze_graph(model_folder):
     # We retrieve our checkpoint fullpath
     checkpoint = tf.train.get_checkpoint_state(model_folder)
@@ -17,7 +14,7 @@ def freeze_graph(model_folder):
     # Before exporting our graph, we need to precise what is our output node
     # This is how TF decides what part of the Graph he has to keep and what part it can dump
     # NOTE: this variable is plural, because you can have multiple output nodes
-    output_node_names = 'generated_output/output'
+    output_node_names = 'generate_output/output'
 
     # We clear devices to allow TensorFlow to control on which device it will load operations
     clear_devices = True
@@ -51,4 +48,4 @@ if __name__ == '__main__':
     parser.add_argument('--folder', type=str, help='Folder to export model to')
     args = parser.parse_args()
 
-    freeze_graph(args.model_folder)
+    freeze_graph(args.folder)

@@ -6,87 +6,67 @@ from imutils import face_utils
 from imutils.video import FileVideoStream
 import time
 import os
+import argparse
 
-video_link = "/path/to/video/file"
-op_directory = "/path/to/annotated/image"
-ip_directory = "/path/to/aligned/image"
-orig_directory = "/path/to/frame/image"
-shape_predictor_path = "/path/to/shape_predictor_68_face_landmarks.dat"
+def create_dir(pth):
+    cwd = os.getcwd()
+    dir = cwd + "/" + pth
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    return dir + "/"
 
+def pre_process(video, align_dir, frame_dir=None):
+    init_frame = 0
+    frame = 10000
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(shape_predictor_path)
+    fa = face_utils.FaceAligner(predictor, desiredFaceWidth=256)
+    print("New video")
 
-init_frame = 0
-frame = 10000
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(shape_predictor_path)
-fa = face_utils.FaceAligner(predictor, desiredFaceWidth=300)
+    counter = 0
+    vs = FileVideoStream(video).start()
+    cap = cv2.VideoCapture(video)
+    video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    time.sleep(2.0)
+    print(video_length)
 
-print("new src")
+    while counter < video_length:
+        print(counter)
 
-counter = 0
-vs = FileVideoStream(video_link).start()
-cap = cv2.VideoCapture(video_link)
-video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-time.sleep(2.0)
+        flag = 0
+        count = 0
+        clone = np.zeros([256,256,3], dtype=np.uint8)
+        image = vs.read()
+        image = imutils.resize(image, width=800)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        rects = detector(gray, 1)
+        if len(rects) != 0 :
 
-print(video_length)
+            # Loop over the face detections
+            for (i, rect) in enumerate(rects):
+                # faceAligned, M = fa.align(image, gray, rect)
+                faceAligned = fa.align(image, gray, rect)
+                faceAligned = imutils.resize(faceAligned, width=256)
 
-while counter < video_length:
+                cv2.imwrite(align_dir + str(frame) + ".png", faceAligned)
+                if frame_dir != None:
+                    cv2.imwrite(frame_dir + str(frame) + ".png", image)
+            frame = frame + 1
+        counter = counter + 1
 
-    print(frame)
+parser = argparse.ArgumentParser()
+parser.add_argument('--source', type=str, help='Path to source video', required=True)
+parser.add_argument('--target', type=str, help='Path to target video', required=True)
+parser.add_argument('--predictor', type=str, help='Path to shape_predictor_68_face_landmarks.dat', required=True)
+args = parser.parse_args()
 
-    flag = 0
-    count = 0
-    clone = np.zeros([300,300,3], dtype=np.uint8)
-    image = vs.read()
-    image = imutils.resize(image, width=800)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    rects = detector(gray, 1)
-    if len(rects) != 0 :
+src_video = args.source
+tgt_video = args.target
 
-        # loop over the face detections
-        for (i, rect) in enumerate(rects):
-            faceAligned, M = fa.align(image, gray, rect)
-            faceAligned = imutils.resize(faceAligned, width=256)
-            
-            cv2.imwrite(ip_directory + str(frame) + ".png", faceAligned)
-            cv2.imwrite(orig_directory + str(frame) + ".png", image)
-            rectan = dlib.rectangle(0, 0, 300, 300)
-            grays = cv2.cvtColor(faceAligned, cv2.COLOR_BGR2GRAY)
+src_ip_directory = create_dir("align_src")
+tgt_ip_directory = create_dir("align_tgt")
+orig_directory = create_dir("frames")
+shape_predictor_path = args.predictor
 
-            shape = predictor(grays, rectan)
-            shape = face_utils.shape_to_np(shape)
-
-            # loop over the face parts individually
-            for (name, (i, j)) in face_utils.FACIAL_LANDMARKS_IDXS.items():
-                if name == "mouth":
-                    centre = np.sum(shape[i:j], axis=0)
-                    centre = centre/[20, 20]
-                    centre = [ int(x) for x in centre ]
-                    for (x, y) in shape[i:j]:
-
-                        if flag == 0:
-                            (init_a, init_b) = (a, b) = (x, y)
-                            flag = 1
-
-                        elif count == 11:
-                            cv2.line(clone, (a, b), (x, y), (0, 0, 255), 1)
-                            cv2.line(clone, (init_a, init_b), (x, y), (0, 0, 255), 1)
-                            flag = 0
-
-                        elif count == 19:
-                            cv2.line(clone, (a, b), (x, y), (0, 0, 255), 1)
-                            cv2.line(clone, (init_a, init_b), (x, y), (0, 0, 255), 1)
-
-                        else:
-                            cv2.line(clone, (a, b), (x, y), (0, 0, 255), 1)
-                            (a, b) = (x, y)
-
-                        count = count + 1
-
-                    faceAligned[centre[1]-50:centre[1]+50, centre[0]-50:centre[0]+50] = clone[centre[1]-50:centre[1]+50, centre[0]-50:centre[0]+50]
-        
-        cv2.imwrite(op_directory + str(frame) + ".png", faceAligned)
-        frame = frame + 1
-    
-    init_frame = init_frame + 1
-    counter = counter + 1
+pre_process(src_video, src_ip_directory)
+pre_process(tgt_video, tgt_ip_directory, orig_directory)
